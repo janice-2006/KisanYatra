@@ -1,0 +1,8 @@
+.venv/
+.venv.7z
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+secrets.toml
+users_db.json
+user_history/
