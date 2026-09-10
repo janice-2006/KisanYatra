@@ -1,0 +1,14 @@
+streamlit
+pandas
+numpy
+scikit-learn
+torch
+torchvision
+pillow
+matplotlib
+seaborn
+plotly
+opencv-python-headless
+requests
+gTTS
+streamlit-geolocation
