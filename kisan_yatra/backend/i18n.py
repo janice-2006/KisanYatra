@@ -219,7 +219,7 @@ TRANSLATIONS = {
         "treatment": "ਇਲਾਜ ਦੇ ਵਿਕਲਪ",
         "prevention": "ਬਚਾਅ",
         "healthy_guide": "💚 ਸਿਹਤਮੰਦ ਫ਼ਸਲ ਸੰਭਾਲ ਮਾਰਗਦਰਸ਼ਨ",
-        "no_detection": "ਮਾਡਲ ਨੇ ਕੋਈ ਰੋਗ ਵਾਲਾ ਖੇਤਰ ਨਹੀਂ ਲੱਭਿਆ। ਇਹ ਫ਼ਸਲ ਦੇ ਸਿਹਤਮੰਦ ਹੋਣ ਦਾ ਸਬੂਤ ਨਹੀਂ ਹੈ।",
+        "no_detection": "ਮਾਡਲ ਨੇ ਕੋਈ ਰੋਗ ਵਾਲਾ ਖੇਤਰ ਨਹੀਂ ਲੱਭਿਆ। ਇਹ ਫ਼ਸਲ ਦੇ ਸਿਹਤਮੰਦ ਹੋਣ ਦਾ ਸਬੂਤ ਨਹੀਂ ਹੈ.",
     },
     "বাংলা": {
         "language": "ভাষা",
@@ -258,13 +258,11 @@ TRANSLATIONS = {
     },
 }
 
-
 def translate(language, key, default=None):
     """Return a translated label, falling back to English for missing keys."""
     return TRANSLATIONS.get(language, TRANSLATIONS["English"]).get(
         key, TRANSLATIONS["English"].get(key, default or key)
     )
-
 
 TERM_TRANSLATIONS = {
     "rice": {"हिन्दी": "चावल", "தமிழ்": "அரிசி", "తెలుగు": "వరి"},
@@ -278,10 +276,10 @@ TERM_TRANSLATIONS = {
     "lentil": {"हिन्दी": "मसूर", "தமிழ்": "பருப்பு", "తెలుగు": "మసూర్ పప్పు"},
     "banana": {"हिन्दी": "केला", "தமிழ்": "வாழை", "తెలుగు": "అరటి"},
     "mango": {"हिन्दी": "आम", "தமிழ்": "மாம்பழம்", "తెలుగు": "మామిడి"},
-    "grapes": {"हिन्दी": "अंगूर", "தமிழ்": "திராட்சை", "తెలుగు": "ద్రాక్ష"},
+    "grapes": {"हिन्दी": "அंगूर", "தமிழ்": "திராட்சை", "తెలుగు": "ద్రాక్ష"},
     "watermelon": {"हिन्दी": "तरबूज", "தமிழ்": "தர்பூசணி", "తెలుగు": "పుచ్చకాయ"},
     "apple": {"हिन्दी": "सेब", "தமிழ்": "ஆப்பிள்", "తెలుగు": "ఆపిల్"},
-    "papaya": {"हिन्दी": "पपीता", "தமிழ்": "பப்பாளி", "తెలుగు": "బొప్పాయి"},
+    "papaya": {"हिन्दी": "পपीता", "தமிழ்": "பப்பாளி", "తెలుగు": "బొప్పాయి"},
     "coconut": {"हिन्दी": "नारियल", "தமிழ்": "தேங்காய்", "తెలుగు": "కొబ్బరి"},
     "cotton": {"हिन्दी": "कपास", "தமிழ்": "பருத்தி", "తెలుగు": "పత్తి"},
     "coffee": {"हिन्दी": "कॉफी", "தமிழ்": "காபி", "తెలుగు": "కాఫీ"},
@@ -298,11 +296,56 @@ TERM_TRANSLATIONS = {
     "healthy": {"हिन्दी": "स्वस्थ फसल", "தமிழ்": "ஆரோக்கியமான பயிர்", "తెలుగు": "ఆరోగ్యకరమైన పంట"},
 }
 
-
 def translate_term(language, term):
     """Translate a model vocabulary term while preserving unknown values."""
     normalized = str(term).lower().replace(" ", "_")
     return TERM_TRANSLATIONS.get(normalized, {}).get(language, term)
+
+
+# Comprehensive Multilingual Remedy Dictionary for Disease Details & Audio
+REMEDY_TRANSLATIONS = {
+    "en": {
+        "desc_default": "Fungal infection causing circular spots or mold growth.",
+        "treat_default": "Apply organic or chemical fungicides recommended for crops.",
+        "prev_default": "Ensure proper spacing and avoid overhead watering.",
+    },
+    "hi": {
+        "desc_default": "फंगल संक्रमण जिसके कारण धब्बे या फफूंदी विकसित होती है।",
+        "treat_default": "फसल के लिए अनुशंसित जैविक या रासायनिक कवकनाशी का प्रयोग करें।",
+        "prev_default": "उचित दूरी बनाए रखें और ऊपर से पानी देने से बचें।",
+    },
+    "ta": {
+        "desc_default": "வட்ட புள்ளிகள் அல்லது பூஞ்சை வளர்ச்சியை ஏற்படுத்தும் பூஞ்சைத் தொற்று.",
+        "treat_default": "பயிர்களுக்கு பரிந்துரைக்கப்படும் இயற்கை அல்லது ரசாயன பூஞ்சைக் கொல்லிகளைப் பயன்படுத்துங்கள்.",
+        "prev_default": "முறையான இடைவெளியைப் பராமரிக்கவும், மேலிருந்து தண்ணீர் ஊற்றுவதைத் தவிர்க்கவும்.",
+    },
+    "te": {
+        "desc_default": "వృత్తాకార మచ్చలు లేదా శిలీంధ్రాల పెరుగుదలకు కారణమయ్యే శిలీంధ్ర సంక్రమణ.",
+        "treat_default": "పంటలకు సిఫార్సు చేయబడిన సేంద్రీయ లేదా రసాయన శిలీంద్ర నాశకాలను వర్తింపజేయండి.",
+        "prev_default": "సరైన దూరాన్ని పాటించండి మరియు పై నుండి నీరు పోయడం మానుకోండి.",
+    },
+    "ml": {
+        "desc_default": "വൃത്താകൃതിയിലുള്ള പാടുകളോ പൂപ്പൽ വളർച്ചയോ ഉണ്ടാക്കുന്ന ഫംഗസ് അണുബാധ.",
+        "treat_default": "വിളകൾക്കായി ശുപാർശ ചെയ്യുന്ന ജൈവ അല്ലെങ്കിൽ രാസ ഫംഗസ് നാശിനികൾ പ്രയോഗിക്കുക.",
+        "prev_default": "ശരിയായ അകലം പാലിക്കുക, മുകളിൽ നിന്ന് വെള്ളം ഒഴിക്കുന്നത് ഒഴിവാക്കുക.",
+    },
+    "pa": {
+        "desc_default": "ਫੰਗਲ ਇਨਫੈਕਸ਼ਨ ਜੋ ਗੋਲ ਦਾਗ ਜਾਂ ਉੱਲੀ ਦਾ ਕਾਰਨ ਬਣਦੀ ਹੈ।",
+        "treat_default": "ਫਸਲਾਂ ਲਈ ਸਿਫਾਰਸ਼ ਕੀਤੇ ਜੈਵਿਕ ਜਾਂ ਰਸਾਇਣਕ ਉੱਲੀনাশਕ ਲਗਾਓ।",
+        "prev_default": "ਢੁਕਵੀਂ ਦੂਰੀ ਬਣਾ ਕੇ ਰੱਖੋ ਅਤੇ ਉੱਪਰੋਂ ਪਾਣੀ ਦੇਣ ਤੋਂ ਪਰਹੇਜ਼ ਕਰੋ।",
+    },
+    "bn": {
+        "desc_default": "ছত্রাক সংক্রমণ যা বৃত্তাকার দাগ বা ছাঁচ বৃদ্ধির কারণ হয়।",
+        "treat_default": "ফসলের জন্য প্রস্তাবিত জৈব বা রাসায়নিক ছত্রাকনাশক প্রয়োগ করুন।",
+        "prev_default": "সঠিক ব্যবধান বজায় রাখুন এবং উপর থেকে জল দেওয়া এড়িয়ে চলুন।",
+    },
+}
+
+def translate_disease_detail(language_code, detail_type, fallback_text):
+    """Translate or localize disease description, treatments, and prevention text."""
+    lang = language_code if language_code in REMEDY_TRANSLATIONS else "en"
+    key = f"{detail_type}_default"
+    return REMEDY_TRANSLATIONS.get(lang, REMEDY_TRANSLATIONS["en"]).get(key, fallback_text)
 
 
 TRADER_TRANSLATIONS = {
@@ -329,13 +372,12 @@ TRADER_TRANSLATIONS = {
         "sell": "🌾 എന്റെ വിള വിൽക്കുക", "sell_subtitle": "നിങ്ങളുടെ വിള വാങ്ങുന്ന സമീപ വ്യാപാരികളെ കണ്ടെത്തുക.", "find": "📍 സമീപ വ്യാപാരികളെ കണ്ടെത്തുക", "permission": "നിങ്ങളുടെ വിള വാങ്ങുന്ന വ്യാപാരികളെ കണ്ടെത്താൻ Kisan Yatra-യ്ക്ക് നിങ്ങളുടെ സ്ഥാനം ആക്സസ് ചെയ്യാൻ അനുമതി നൽകുക.", "allow_fallback": "📍 ഏകദേശ സ്ഥാനം ഉപയോഗിക്കുക", "later": "പിന്നീട്", "location_missing": "ലൊക്കേഷൻ സൗകര്യത്തിന് അധിക പാക്കേജ് ആവശ്യമാണ്.", "nearby": "📍 സമീപ വ്യാപാരികൾ", "sorted": "ഫലങ്ങൾ ദൂരമനുസരിച്ച് ക്രമീകരിച്ചിരിക്കുന്നു.", "no_traders": "സമീപ വ്യാപാരികൾ ഇപ്പോൾ വാങ്ങുന്നില്ല", "nearest": "⭐ ഏറ്റവും സമീപത്തെ വ്യാപാരി", "nearby_trader": "സമീപ വ്യാപാരി", "buys": "🌾 വാങ്ങുന്നത്", "away": "കി.മീ അകലെ", "approx": "ഏകദേശം", "minutes": "മിനിറ്റ്", "price": "💰 നിലവിലെ വാങ്ങൽ വില", "quintal": "ക്വിന്റൽ", "details": "വിശദാംശങ്ങൾ കാണുക", "type": "തരം", "address": "വിലാസം", "hours": "പ്രവർത്തന സമയം", "contact": "ബന്ധപ്പെടുക", "call": "📞 വ്യാപാരിയെ വിളിക്കുക", "directions": "🗺️ വഴി നേടുക", "prototype_note": "വ്യാപാരി വിലകൾ ഇപ്പോൾ മാതൃകാ കണക്കുകളാണ്; പിന്നീട് ലൈവ് മാർക്കറ്റ് API ചേർക്കാം.",
     },
     "ਪੰਜਾਬੀ": {
-        "sell": "🌾 ਆਪਣੀ ਫ਼ਸਲ ਵੇਚੋ", "sell_subtitle": "ਆਪਣੀ ਫ਼ਸਲ ਖਰੀਦਣ ਵਾਲੇ ਨੇੜਲੇ ਵਪਾਰੀ ਲੱਭੋ।", "find": "📍 ਨੇੜਲੇ ਵਪਾਰੀ ਲੱਭੋ", "permission": "ਤੁਹਾਡੀ ਫ਼ਸਲ ਖਰੀਦਣ ਵਾਲੇ ਵਪਾਰੀ ਲੱਭਣ ਲਈ Kisan Yatra ਨੂੰ ਆਪਣੀ ਲੋਕੇਸ਼ਨ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ।", "allow_fallback": "📍 ਅਨੁਮਾਨਿਤ ਲੋਕੇਸ਼ਨ ਵਰਤੋ", "later": "ਬਾਅਦ ਵਿੱਚ", "location_missing": "ਲੋਕੇਸ਼ਨ ਲਈ ਵਾਧੂ ਪੈਕੇਜ ਦੀ ਲੋੜ ਹੈ।", "nearby": "📍 ਤੁਹਾਡੇ ਨੇੜੇ ਵਪਾਰੀ", "sorted": "ਨਤੀਜੇ ਦੂਰੀ ਅਨੁਸਾਰ ਹਨ।", "no_traders": "ਨੇੜਲੇ ਵਪਾਰੀ ਇਸ ਸਮੇਂ ਨਹੀਂ ਖਰੀਦ ਰਹੇ", "nearest": "⭐ ਸਭ ਤੋਂ ਨੇੜਲਾ ਵਪਾਰੀ", "nearby_trader": "ਨੇੜਲਾ ਵਪਾਰੀ", "buys": "🌾 ਖਰੀਦਦਾ ਹੈ", "away": "ਕਿਲੋਮੀਟਰ ਦੂਰ", "approx": "ਲਗਭਗ", "minutes": "ਮਿੰਟ", "price": "💰 ਮੌਜੂਦਾ ਖਰੀਦ ਕੀਮਤ", "quintal": "ਕੁਇੰਟਲ", "details": "ਵੇਰਵੇ ਵੇਖੋ", "type": "ਕਿਸਮ", "address": "ਪਤਾ", "hours": "ਖੁੱਲ੍ਹਣ ਦਾ ਸਮਾਂ", "contact": "ਸੰਪਰਕ", "call": "📞 ਵਪਾਰੀ ਨੂੰ ਕਾਲ ਕਰੋ", "directions": "🗺️ ਰਸਤਾ ਲਵੋ", "prototype_note": "ਵਪਾਰੀ ਕੀਮਤਾਂ ਇਸ ਵੇਲੇ ਨਮੂਨਾ ਅਨੁਮਾਨ ਹਨ; ਬਾਅਦ ਵਿੱਚ ਲਾਈਵ ਮਾਰਕੀਟ API ਜੋੜੀ ਜਾ ਸਕਦੀ ਹੈ।",
+        "sell": "🌾 ਆਪਣੀ ਫ਼ਸਲ ਵੇਚੋ", "sell_subtitle": "ਆਪਣੀ ਫ਼ਸਲ ਖਰੀਦਣ ਵਾਲੇ ਨੇੜਲੇ ਵਪਾਰੀ ਲੱਭੋ।", "find": "📍 ਨੇੜਲੇ ਵਪਾਰੀ ਲੱਭੋ", "permission": "ਤੁਹਾਡੀ ਫ਼ਸਲ ਖਰੀਦਣ ਵਾਲੇ ਵਪਾਰੀ ਲੱਭਣ ਲਈ Kisan Yatra ਨੂੰ ਆਪਣੀ ਲੋਕੇਸ਼ਨ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ।", "allow_fallback": "📍 ਅਨੁਮਾਨਿਤ ਲੋਕੇਸ਼ਨ ਵਰਤੋ", "later": "ਬਾਅਦ ਵਿੱਚ", "location_missing": "ਲੋਕੇਸ਼ਨ ਲਈ ਵਾਧੂ ਪੈਕੇਜ ਦੀ ਲੋੜ ਹੈ।", "nearby": "📍 ਤੁਹਾਡੇ ਨੇੜੇ ਵਪਾਰੀ", "sorted": "ਨਤੀਜੇ ਦੂਰੀ ਅਨੁਸਾਰ ਹਨ।", "no_traders": "ਨੇੜਲੇ ਵਪਾਰੀ ਇਸ ਸਮੇਂ ਨਹੀਂ ਖਰੀਦ ਰਹੇ", "nearest": "⭐ ਸਭ ਤੋਂ ਨੇੜਲਾ ਵਪਾਰੀ", "nearby_trader": "ਨੇੜਲਾ ਵਪਾਰੀ", "buys": "🌾 ਖਰੀਦਦਾ ਹੈ", "away": "ਕਿਲੋਮੀਟਰ ਦੂਰ", "approx": "ਲਗਭਗ", "minutes": "ਮਿੰਟ", "price": "💰 ਮੌਜੂਦਾ ਖਰੀਦ ਕੀਮਤ", "quintal": "ਕੁਇੰਟਲ", "details": "ਵੇਰਵੇ ਵੇਖੋ", "type": "ਕਿਸਮ", "address": "ਪਤਾ", "hours": "ਖੁੱਲ੍ਹਣ ਦਾ ਸਮਾਂ", "contact": "ਸੰਪਰਕ", "call": "📞 ਵਪਾਰੀ ਨੂੰ ਕਾਲ ਕਰੋ", "directions": "🗺️ ਰਸਤਾ ਲਵੋ", "prototype_note": "ਵਪਾਰੀ ਕੀਮਤਾਂ ਇਸ ਵੇਲੇ ਨਮੂਨਾ ਅਨੁਮਾਨ ਹਨ; ਬਾਅਦ ਵਿੱਚ ਲਾਈਵ ਮਾਰਕੀਟ API ਜੋੜੀ ਜਾ ਸਕਦੀ ਹੈ.",
     },
     "বাংলা": {
         "sell": "🌾 আমার ফসল বিক্রি করুন", "sell_subtitle": "আপনার ফসল কিনতে পারে এমন কাছের ব্যবসায়ীদের খুঁজুন।", "find": "📍 কাছের ব্যবসায়ী খুঁজুন", "permission": "আপনার ফসল কেনেন এমন ব্যবসায়ীদের খুঁজতে Kisan Yatra-কে আপনার অবস্থান ব্যবহারের অনুমতি দিন।", "allow_fallback": "📍 আনুমানিক অবস্থান ব্যবহার করুন", "later": "পরে", "location_missing": "অবস্থান সুবিধার জন্য ঐচ্ছিক প্যাকেজ প্রয়োজন।", "nearby": "📍 আপনার কাছের ব্যবসায়ী", "sorted": "ফলাফল দূরত্ব অনুযায়ী সাজানো হয়েছে।", "no_traders": "কাছের ব্যবসায়ীরা বর্তমানে কিনছেন না", "nearest": "⭐ নিকটতম ব্যবসায়ী", "nearby_trader": "কাছের ব্যবসায়ী", "buys": "🌾 কেনে", "away": "কিমি দূরে", "approx": "প্রায়", "minutes": "মিনিট", "price": "💰 বর্তমান ক্রয় মূল্য", "quintal": "কুইন্টাল", "details": "বিস্তারিত দেখুন", "type": "ধরন", "address": "ঠিকানা", "hours": "খোলার সময়", "contact": "যোগাযোগ", "call": "📞 ব্যবসায়ীকে কল করুন", "directions": "🗺️ পথ দেখুন", "prototype_note": "ব্যবসায়ীর দাম এখন প্রোটোটাইপ অনুমান; পরে লাইভ মার্কেট API যোগ করা যাবে।",
     },
 }
-
 
 def translate_trader(language, key):
     return str(TRADER_TRANSLATIONS.get(language, TRADER_TRANSLATIONS["English"]).get(key, key))
