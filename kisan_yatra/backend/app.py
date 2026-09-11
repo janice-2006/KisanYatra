@@ -36,15 +36,15 @@ except ImportError:
 # Import disease detection module (handles cv2 internally)
 try:
     from disease_detection import (
-        draw_detections,
-        load_roboflow_client, detect_disease_roboflow,
+        draw_prediction_label,
+        load_disease_model, predict_disease,
         DISEASE_REMEDIES
     )
 except ImportError as e:
     st.warning(f"Disease detection module not available: {e}")
-    draw_detections = None
-    load_roboflow_client = None
-    detect_disease_roboflow = None
+    draw_prediction_label = None
+    load_disease_model = None
+    predict_disease = None
     DISEASE_REMEDIES = {}
 
 # ============================================================================
@@ -1012,115 +1012,76 @@ def page_disease_detection():
     st.markdown(f"<h2 class='section-title'>{t('disease_detection')}</h2>", unsafe_allow_html=True)
     st.markdown(t("disease_help"))
     
-    st.info("💡 **Disease Detection Feature**: Uses the Roboflow computer-vision model")
+    st.info("💡 **Disease Detection Feature**: Powered by your locally trained EfficientNet model.")
+    
+    model, class_names, model_error = load_disease_model() if load_disease_model else (None, None, "Module not available")
     
     col1, col2 = st.columns([1, 1])
     
     with col1:
         st.markdown(f"### {t('upload_crop')}")
-        roboflow_client, roboflow_error = load_roboflow_client()
         uploaded_file = st.file_uploader(
             t("upload_crop_help"),
             type=["jpg", "png", "jpeg", "webp"],
             key="disease_upload",
-            disabled=bool(roboflow_error),
+            disabled=bool(model_error),
         )
 
-        if roboflow_error:
-            st.caption("Disease detection is unavailable until the deployment secret is configured.")
+        if model_error:
+            st.caption(f"⚠️ {model_error}")
         
         if uploaded_file:
-            image = Image.open(uploaded_file)
+            image = Image.open(uploaded_file).convert('RGB')
             st.image(image, caption='Uploaded Image', use_container_width=True)
     
     with col2:
-        st.markdown(f"### {t('detection_settings')}")
-        confidence = st.slider(t("confidence"), 0.1, 1.0, 0.5, 0.05)
-        
         st.markdown(f"### {t('model_status')}")
-        if not roboflow_error:
-            st.success("✅ Roboflow hosted model is ready!")
-            st.caption("Using crop-disease-axhjj/1 through hosted inference.")
+        if not model_error and model is not None:
+            st.success("✅ Local classification model is ready!")
+            st.caption(f"Loaded {len(class_names)} disease categories.")
         else:
-            st.warning(f"⚠️ {roboflow_error}")
+            st.warning("⚠️ Local model not loaded. Ensure `disease_efficientnet_b0.pth` and `disease_classes.pkl` are inside your `models/` directory.")
     
-    # Run detection if image uploaded
-    if uploaded_file:
+    # Run prediction if image is uploaded and model is loaded
+    if uploaded_file and not model_error and model is not None:
         st.markdown("---")
         
         if st.button(t("detect"), type="primary", use_container_width=True):
             with st.spinner("🤔 Analyzing image for diseases..."):
                 try:
-                    model, error = load_roboflow_client()
+                    predicted_class, confidence = predict_disease(image, model, class_names)
+                    disease_key = predicted_class.lower().replace(" ", "_")
+                    display_disease_name = translate_term(st.session_state.language, disease_key)
                     
-                    if error:
-                        st.error(f"Roboflow configuration error: {error}")
-                        return
+                    # Get disease info from dictionary
+                    disease_info = DISEASE_REMEDIES.get(disease_key, DISEASE_REMEDIES.get(predicted_class))
                     
-                    # Convert PIL image to numpy array
-                    image_array = np.array(image)
-                    
-                    detections, error = detect_disease_roboflow(image_array, model, confidence)
-                    
-                    if error:
-                        st.error(f"Detection error: {error}")
-                        return
-                    
-                    # Display results
-                    if detections and len(detections) > 0:
-                        st.markdown(t("diseases_detected"))
+                    with st.expander(f"🔴 {display_disease_name} (Confidence: {confidence:.1%})", expanded=True):
+                        col_d1, col_d2 = st.columns([1, 1])
                         
-                        for i, detection in enumerate(detections):
-                            disease_class = detection["class"].lower().replace(" ", "_")
-                            conf = detection["confidence"]
-                            display_disease_name = translate_term(st.session_state.language, disease_class)
-                            
-                            # Get disease info
-                            disease_info = DISEASE_REMEDIES.get(disease_class)
-                            
-                            with st.expander(f"🔴 {display_disease_name} (Confidence: {conf:.1%})", expanded=True):
-                                col_d1, col_d2 = st.columns([1, 1])
-                                
-                                with col_d1:
-                                    st.markdown(f"**{t('description')}:**")
-                                    st.write(disease_info['description'] if disease_info else "Disease class returned by the trained model.")
-                                    st.markdown(f"**Confidence Score:** `{conf:.1%}`")
-                                
-                                with col_d2:
-                                    if disease_info:
-                                        st.markdown(f"**{t('treatment')}:**")
-                                        for treatment in disease_info['treatment']:
-                                            st.write(treatment)
-                                    else:
-                                        st.info("Add this model class to DISEASE_REMEDIES for treatment guidance.")
-                                
-                                if disease_info:
-                                    st.markdown(f"**{t('prevention')}:** {disease_info['prevention']}")
-                                    render_voice_output(
-                                        f"{display_disease_name}. {disease_info['description']}. "
-                                        f"{t('treatment')}: {'; '.join(disease_info['treatment'])}",
-                                        f"speak_disease_{i}",
-                                    )
+                        with col_d1:
+                            st.markdown(f"**{t('description')}:**")
+                            st.write(disease_info['description'] if disease_info else "Disease class predicted by the local model.")
+                            st.markdown(f"**Confidence Score:** `{confidence:.1%}`")
                         
-                        # Draw and display annotated image
-                        if len(detections) > 0:
-                            annotated_image = draw_detections(image_array, detections)
-                            st.markdown("### 📍 Annotated Image")
-                            st.image(annotated_image, caption='Detection Results', use_container_width=True)
-                    
-                    else:
-                        st.info(t("no_detection"))
-                        disease_info = DISEASE_REMEDIES.get("healthy")
+                        with col_d2:
+                            if disease_info:
+                                st.markdown(f"**{t('treatment')}:**")
+                                for treatment in disease_info['treatment']:
+                                    st.write(treatment)
+                            else:
+                                st.info("Add this class key to DISEASE_REMEDIES for customized treatment guidance.")
                         
-                        with st.expander(t("healthy_guide"), expanded=True):
-                            st.markdown("#### Recommended Care Practices:")
-                            for care in disease_info['treatment']:
-                                st.write(care)
+                        if disease_info:
+                            st.markdown(f"**{t('prevention')}:** {disease_info['prevention']}")
+                            render_voice_output(
+                                f"{display_disease_name}. {disease_info.get('description', '')}. "
+                                f"{t('treatment')}: {'; '.join(disease_info.get('treatment', []))}",
+                                "speak_disease_result",
+                            )
                 
                 except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
-                    st.info("💡 Check that ROBOFLOW_API_KEY is configured and valid.")
-
+                    st.error(f"An error occurred during prediction: {str(e)}")
 # ============================================================================
 # MAIN APP LOGIC
 # ============================================================================

@@ -1,22 +1,25 @@
-"""Crop disease detection through the Roboflow hosted model."""
+"""Crop disease detection through the local trained EfficientNet model."""
 
 import os
-import cv2
-import numpy as np
-import base64
-import requests
+import torch
+import torch.nn as nn
+from torchvision import transforms, models
+from PIL import Image
+from pathlib import Path
+import pickle
 
 try:
     import streamlit as st
 except ImportError:
     st = None
 
-ROBOFLOW_MODEL_ID = "crop-disease-axhjj/1"
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_DIR = BASE_DIR / "models"
 
 # ============================================================================
 # DISEASE & TREATMENT DATABASE
 # ============================================================================
-
+# (Keep your existing DISEASE_REMEDIES dictionary here unchanged)
 DISEASE_REMEDIES = {
     "powdery_mildew": {
         "name": "Powdery Mildew",
@@ -116,88 +119,53 @@ DISEASE_REMEDIES = {
     }
 }
 
-def load_roboflow_client(api_key=None):
-    """Create hosted-inference configuration from a parameter, env var, or secret."""
-    key = api_key or os.getenv("ROBOFLOW_API_KEY")
-    if not key and st is not None:
-        try:
-            key = st.secrets.get("ROBOFLOW_API_KEY")
-        except Exception:
-            key = None
+# Cache resource so model loads only once
+if st is not None:
+    load_cache = st.cache_resource
+else:
+    load_cache = lambda f: f
 
-    if not key:
-        return None, "ROBOFLOW_API_KEY is not configured"
-    return {"api_key": key}, None
-
-def detect_disease_roboflow(image, client, confidence_threshold=0.5):
-    """Run Roboflow inference and normalize predictions for the existing UI."""
-    if client is None:
-        return None, "Roboflow client not configured"
-
+@load_cache
+def load_disease_model():
+    """Load the locally trained EfficientNet-B0 disease classification model."""
     try:
-        image_array = np.asarray(image)
-        success, encoded_image = cv2.imencode(
-            ".jpg", cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
-        )
-        if not success:
-            return None, "Could not encode uploaded image"
-
-        response = requests.post(
-            f"https://serverless.roboflow.com/{ROBOFLOW_MODEL_ID}",
-            data=base64.b64encode(encoded_image.tobytes()),
-            headers={
-                "Authorization": f"Bearer {client['api_key']}",
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            timeout=60,
-        )
-        response.raise_for_status()
-        response = response.json()
-
-        image_height, image_width = image_array.shape[:2]
-        detections = []
-        for prediction in response.get("predictions", []):
-            confidence = float(prediction.get("confidence", 0))
-            if confidence < confidence_threshold:
-                continue
-
-            center_x = float(prediction["x"])
-            center_y = float(prediction["y"])
-            box_width = float(prediction["width"])
-            box_height = float(prediction["height"])
-            detections.append({
-                "class": prediction.get("class", "unknown"),
-                "confidence": confidence,
-                "coordinates": [[
-                    max(0, center_x - box_width / 2),
-                    max(0, center_y - box_height / 2),
-                    min(image_width, center_x + box_width / 2),
-                    min(image_height, center_y + box_height / 2),
-                ]],
-            })
-
-        return detections, None
+        model_path = MODEL_DIR / "disease_efficientnet_b0.pth"
+        classes_path = MODEL_DIR / "disease_classes.pkl"
+        
+        if not model_path.exists() or not classes_path.exists():
+            return None, None, "Model files ('disease_efficientnet_b0.pth' or 'disease_classes.pkl') not found in 'models/' folder."
+        
+        with open(classes_path, "rb") as f:
+            disease_classes = pickle.load(f)
+            
+        model = models.efficientnet_b0(weights=None)
+        num_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(num_features, len(disease_classes))
+        
+        state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+        model.load_state_dict(state_dict)
+        model.eval()
+        return model, disease_classes, None
     except Exception as e:
-        return None, f"Roboflow detection error: {str(e)}"
+        return None, None, f"Error loading local model: {str(e)}"
 
-def draw_detections(image, detections):
-    """
-    Draw bounding boxes on image
-    """
-    img_copy = image.copy()
+def predict_disease(image, model, class_names):
+    """Run local inference on the uploaded PIL image and return predicted class and confidence."""
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+    image_tensor = transform(image).unsqueeze(0)
     
-    for detection in detections:
-        x1, y1, x2, y2 = map(int, detection["coordinates"][0])
-        conf = detection["confidence"]
-        class_name = detection["class"]
+    with torch.no_grad():
+        outputs = model(image_tensor)
+        probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
+        confidence, predicted_idx = torch.max(probabilities, 0)
         
-        # Draw bounding box
-        cv2.rectangle(img_copy, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        
-        # Draw label
-        label = f"{class_name} ({conf:.2f})"
-        cv2.putText(img_copy, label, (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    
-    return img_copy
+    predicted_class = class_names[predicted_idx.item()]
+    return predicted_class, confidence.item()
 
+def draw_prediction_label(image, label, confidence):
+    """Legacy helper compatibility function for classification."""
+    return image
