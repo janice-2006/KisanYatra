@@ -24,8 +24,8 @@ import plotly.express as px
 import streamlit.components.v1 as components
 from plotly.subplots import make_subplots
 from pathlib import Path
-from datetime import datetime
-from i18n import LANGUAGES, translate, translate_term, translate_trader
+from datetime import datetime, timedelta
+from i18n import LANGUAGES, translate, translate_term, translate_trader, get_localized_disease_info
 from voice import text_to_speech
 
 try:
@@ -46,6 +46,9 @@ except ImportError as e:
     load_disease_model = None
     predict_disease = None
     DISEASE_REMEDIES = {}
+
+import extra_streamlit_components as stx
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 # ============================================================================
 # PAGE CONFIG & THEME
@@ -518,6 +521,46 @@ def render_sell_harvest(crop_name):
 # AUTHENTICATION FUNCTIONS
 # ============================================================================
 
+# ============================================================================
+# "REMEMBER ME" — PERSISTENT LOGIN VIA SIGNED BROWSER COOKIE
+# ============================================================================
+
+REMEMBER_ME_COOKIE_NAME = "kisan_yatra_remember"
+REMEMBER_ME_MAX_AGE_DAYS = 30
+
+
+def get_app_secret_key():
+    try:
+        key = st.secrets.get("APP_SECRET_KEY")
+    except Exception:
+        key = None
+    return key or os.getenv("APP_SECRET_KEY", "change-this-to-a-long-random-string")
+
+
+def get_cookie_manager():
+    return stx.CookieManager()
+
+
+def _remember_me_serializer():
+    return URLSafeTimedSerializer(get_app_secret_key(), salt="kisan-yatra-remember-me")
+
+
+def create_remember_token(email):
+    """Build a signed, tamper-proof token encoding just the user's email."""
+    return _remember_me_serializer().dumps({"email": email})
+
+
+def verify_remember_token(token):
+    """Return the email encoded in a valid, unexpired token, else None."""
+    try:
+        data = _remember_me_serializer().loads(
+            token, max_age=REMEMBER_ME_MAX_AGE_DAYS * 86400
+        )
+        return data.get("email")
+    except (BadSignature, SignatureExpired, Exception):
+        return None
+
+
 def hash_password(password):
     """Hash password using SHA256"""
     return hashlib.sha256(password.encode()).hexdigest()
@@ -713,7 +756,7 @@ def get_market_price(crop_name):
 # PAGE: LOGIN
 # ============================================================================
 
-def page_login():
+def page_login(cookie_manager):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("<h1 class='header-green'>🌾 KisanYatra</h1>", unsafe_allow_html=True)
@@ -736,6 +779,15 @@ def page_login():
                         st.session_state.logged_in = True
                         st.session_state.user_email = email
                         st.session_state.user_name = message
+
+                        token = create_remember_token(email)
+                        cookie_manager.set(
+                            REMEMBER_ME_COOKIE_NAME,
+                            token,
+                            expires_at=datetime.now() + timedelta(days=REMEMBER_ME_MAX_AGE_DAYS),
+                            key="set_remember_cookie",
+                        )
+
                         st.success(f"Welcome back, {message}! 🎉")
                         st.rerun()
                     else:
@@ -1031,6 +1083,12 @@ def page_disease_detection():
             st.caption(f"⚠️ {model_error}")
         
         if uploaded_file:
+            # Clear any stale result from a previously uploaded image.
+            current_file_id = getattr(uploaded_file, "file_id", uploaded_file.name)
+            if st.session_state.get("disease_upload_file_id") != current_file_id:
+                st.session_state.disease_upload_file_id = current_file_id
+                st.session_state.disease_result = None
+
             image = Image.open(uploaded_file).convert('RGB')
             st.image(image, caption='Uploaded Image', use_container_width=True)
     
@@ -1051,47 +1109,73 @@ def page_disease_detection():
                 try:
                     predicted_class, confidence = predict_disease(image, model, class_names)
                     disease_key = predicted_class.lower().replace(" ", "_")
-                    display_disease_name = translate_term(st.session_state.language, disease_key)
-                    
-                    # Get disease info from dictionary
                     disease_info = DISEASE_REMEDIES.get(disease_key, DISEASE_REMEDIES.get(predicted_class))
-                    
-                    with st.expander(f"🔴 {display_disease_name} (Confidence: {confidence:.1%})", expanded=True):
-                        col_d1, col_d2 = st.columns([1, 1])
-                        
-                        with col_d1:
-                            st.markdown(f"**{t('description')}:**")
-                            st.write(disease_info['description'] if disease_info else "Disease class predicted by the local model.")
-                            st.markdown(f"**Confidence Score:** `{confidence:.1%}`")
-                        
-                        with col_d2:
-                            if disease_info:
-                                st.markdown(f"**{t('treatment')}:**")
-                                for treatment in disease_info['treatment']:
-                                    st.write(treatment)
-                            else:
-                                st.info("Add this class key to DISEASE_REMEDIES for customized treatment guidance.")
-                        
-                        if disease_info:
-                            st.markdown(f"**{t('prevention')}:** {disease_info['prevention']}")
-                            render_voice_output(
-                                f"{display_disease_name}. {disease_info.get('description', '')}. "
-                                f"{t('treatment')}: {'; '.join(disease_info.get('treatment', []))}",
-                                "speak_disease_result",
-                            )
-                
+
+                    # Store in session_state so it survives reruns triggered by
+                    # OTHER buttons (like "Listen") instead of vanishing.
+                    st.session_state.disease_result = {
+                        "disease_key": disease_key,
+                        "confidence": confidence,
+                        "disease_info": disease_info,
+                    }
                 except Exception as e:
                     st.error(f"An error occurred during prediction: {str(e)}")
-# ============================================================================
-# MAIN APP LOGIC
-# ============================================================================
+                    st.session_state.disease_result = None
 
+        # Render from session_state (not from the button block above) so a
+        # Listen-button rerun still has something to show.
+        result = st.session_state.get("disease_result")
+        if result:
+            disease_key = result["disease_key"]
+            confidence = result["confidence"]
+            disease_info = result["disease_info"]
+
+            display_disease_name = translate_term(st.session_state.language, disease_key)
+            language_code = LANGUAGES.get(st.session_state.language, "en")
+            localized_info = get_localized_disease_info(language_code, disease_key, disease_info) if disease_info else None
+
+            with st.expander(f"🔴 {display_disease_name} (Confidence: {confidence:.1%})", expanded=True):
+                col_d1, col_d2 = st.columns([1, 1])
+                
+                with col_d1:
+                    st.markdown(f"**{t('description')}:**")
+                    st.write(localized_info['description'] if localized_info else "Disease class predicted by the local model.")
+                    st.markdown(f"**Confidence Score:** `{confidence:.1%}`")
+                
+                with col_d2:
+                    if localized_info:
+                        st.markdown(f"**{t('treatment')}:**")
+                        for treatment in localized_info['treatment']:
+                            st.write(treatment)
+                    else:
+                        st.info("Add this class key to DISEASE_REMEDIES for customized treatment guidance.")
+                
+                if localized_info:
+                    st.markdown(f"**{t('prevention')}:** {localized_info['prevention']}")
+                    render_voice_output(
+                        f"{display_disease_name}. {localized_info.get('description', '')}. "
+                        f"{t('treatment')}: {'; '.join(localized_info.get('treatment', []))}",
+                        "speak_disease_result",
+                    )          
 def main():
+    cookie_manager = get_cookie_manager()
+
     # Initialize session state
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
         st.session_state.user_email = None
         st.session_state.user_name = None
+
+        # Auto-login if a valid "remember me" cookie exists from a past visit.
+        remember_token = cookie_manager.get(REMEMBER_ME_COOKIE_NAME)
+        if remember_token:
+            remembered_email = verify_remember_token(remember_token)
+            if remembered_email:
+                users = load_users_db()
+                if remembered_email in users:
+                    st.session_state.logged_in = True
+                    st.session_state.user_email = remembered_email
+                    st.session_state.user_name = users[remembered_email]["name"]
     
     if "language" not in st.session_state:
         st.session_state.language = "English"
@@ -1131,11 +1215,14 @@ def main():
             st.markdown("---")
             if st.button(t("logout")):
                 st.session_state.logged_in = False
+                st.session_state.user_email = None
+                st.session_state.user_name = None
+                cookie_manager.delete(REMEMBER_ME_COOKIE_NAME, key="delete_remember_cookie")
                 st.rerun()
     
     # Router
     if not st.session_state.logged_in:
-        page_login()
+        page_login(cookie_manager)
     else:
         if st.session_state.current_page == "dashboard":
             page_dashboard()

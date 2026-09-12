@@ -12,3 +12,5 @@ opencv-python-headless
 requests
 gTTS
 streamlit-geolocation
+extra-streamlit-components
+itsdangerous
